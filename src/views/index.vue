@@ -1,0 +1,236 @@
+<template>
+  <div class="app-container">
+    <el-row :gutter="20">
+      <el-col :span="20" :xs="24">
+        <el-form :model="queryParams" ref="queryForm" :inline="true" label-width="68px">
+          <el-form-item label="车号" prop="userName">
+            <el-input
+              v-model="queryParams.code"
+              placeholder="请输入车号"
+              clearable
+              size="small"
+              style="width: 240px"
+              @keyup.enter.native="handleQuery"
+            />
+          </el-form-item>
+          <el-form-item>
+            <el-button type="cyan" icon="el-icon-search" size="mini" @click="handleQuery">搜索</el-button>
+            <el-button icon="el-icon-refresh" size="mini" @click="resetQuery">重置</el-button>
+          </el-form-item>
+        </el-form>
+
+        <el-row :gutter="10" class="mb8">
+          <el-col :span="1.5">
+            <el-button
+              type="primary"
+              icon="el-icon-upload2"
+              size="mini"
+              @click="handleImport"
+            >导入</el-button>
+            <span class="sum-weight">总吨数：{{sumWeight}}</span>
+          </el-col>
+        </el-row>
+
+        <el-table v-loading="loading" :data="userList" @selection-change="handleSelectionChange">
+          <el-table-column type="selection" align="center" />
+          <el-table-column label="日期" align="center" prop="data" :show-overflow-tooltip="true" />
+          <el-table-column label="车号" align="center" prop="code" :show-overflow-tooltip="true" />
+          <el-table-column label="吨数" align="center" prop="weight" :show-overflow-tooltip="true" />
+          <el-table-column label="导入时间" align="center" prop="createTime" />
+          <el-table-column label="状态" align="center">
+            <template slot-scope="scope">
+              <el-switch
+                v-model="scope.row.checkStatus"
+                :active-value = 1
+                :inactive-value = 0
+                @change="handleStatusChange(scope.row)"
+              ></el-switch>
+            </template>
+          </el-table-column>
+          <el-table-column
+            label="操作"
+            align="center"
+            class-name="small-padding fixed-width"
+          >
+            <template slot-scope="scope">
+              <el-button
+                size="mini"
+                type="text"
+                icon="el-icon-edit"
+                @click="handleUpdate(scope.row)"
+              >修改</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+
+      </el-col>
+    </el-row>
+
+    <!-- 用户导入对话框 -->
+    <el-dialog :title="upload.title" :visible.sync="upload.open" width="400px" append-to-body>
+      <el-upload
+        ref="upload"
+        :limit="1"
+        accept=".xlsx, .xls"
+        :headers="upload.headers"
+        :action="upload.url"
+        :disabled="upload.isUploading"
+        :auto-upload="false"
+        drag
+      >
+        <i class="el-icon-upload"></i>
+        <div class="el-upload__text">
+          将文件拖到此处，或
+          <em>点击上传</em>
+        </div>
+        <div class="el-upload__tip" style="color:red" slot="tip">提示：仅允许导入“xls”或“xlsx”格式文件！</div>
+      </el-upload>
+      <div slot="footer" class="dialog-footer">
+        <el-button type="primary" @click="submitFileForm">确 定</el-button>
+        <el-button @click="upload.open = false">取 消</el-button>
+      </div>
+    </el-dialog>
+  </div>
+</template>
+
+<script>
+import { listUser, excelCheck, unExcelCheck } from "@/api/system/user";
+import "@riophae/vue-treeselect/dist/vue-treeselect.css";
+
+export default {
+  name: "User",
+  data() {
+    return {
+      // 总吨数
+      sumWeight: 0,
+      // 列表数据
+      userList: [],
+      // 表单参数
+      form: {},
+      // 用户导入参数
+      upload: {
+        // 是否显示弹出层（用户导入）
+        open: false,
+        // 弹出层标题（用户导入）
+        title: "",
+        // 是否禁用上传
+        isUploading: false,
+        // 上传的地址
+        url: process.env.VUE_APP_BASE_API + "/excel/fileUpload"
+      },
+      // 查询参数
+      queryParams: {
+        code: '',
+      },
+      // 多选
+      ids: [],
+      single: '',
+      multiple: ''
+    };
+  },
+  watch: {
+  },
+  created() {
+    this.getList();
+  },
+  methods: {
+    /** 查询用户列表 */
+    getList() {
+      this.loading = true;
+      listUser(this.queryParams.code).then(response => {
+          this.userList = response;
+          var sumWeight = 0
+          for(var index in this.userList){
+            sumWeight += this.userList[index].weight * 100
+          }
+          this.sumWeight = sumWeight/100
+          this.loading = false;
+        }
+      );
+    },
+
+    // 用户状态修改
+    handleStatusChange(row) {
+      let status = row.checkStatus
+      let text = row.checkStatus === 0 ? "取消合计" : "合计";
+      this.$confirm('确认要'+ text +'吗?', "警告", {
+          confirmButtonText: "确定",
+          cancelButtonText: "取消",
+          type: "warning"
+        }).then(function() {
+          var ids = [row.id]
+          if(status === 0){
+            return unExcelCheck(ids)
+          }else{
+            return excelCheck(ids)
+          }
+        }).then(() => {
+          this.msgSuccess(text + "成功");
+          
+        });
+    },
+
+    // 表单重置
+    reset() {
+      this.form = {
+        code: ''
+      };
+      this.resetForm("form");
+    },
+    /** 搜索按钮操作 */
+    handleQuery() {
+      this.getList();
+    },
+    /** 重置按钮操作 */
+    resetQuery() {
+      this.dateRange = [];
+      this.resetForm("queryForm");
+      this.handleQuery();
+    },
+    // 多选框选中数据
+    handleSelectionChange(selection) {
+      this.ids = selection.map(item => item.id);
+      this.single = selection.length != 1;
+      this.multiple = !selection.length; 
+    },
+
+    /** 提交按钮 */
+    submitForm: function() {
+      this.$refs["form"].validate(valid => {
+        if (valid) {
+          if (this.form.userId != undefined) {
+            updateUser(this.form).then(response => {
+              this.msgSuccess("修改成功");
+              this.open = false;
+              this.getList();
+            });
+          } else {
+            addUser(this.form).then(response => {
+              this.msgSuccess("新增成功");
+              this.open = false;
+              this.getList();
+            });
+          }
+        }
+      });
+    },
+    /** 导入按钮操作 */
+    handleImport() {
+      this.upload.title = "用户导入";
+      this.upload.open = true;
+    },
+    // 提交上传文件
+    submitFileForm() {
+      this.$refs.upload.submit();
+      this.upload.open = false
+      this.getList()
+    }
+  }
+};
+</script>
+
+<style>
+  .sum-weight{
+    padding-left: 30rem;
+  }
+</style>
