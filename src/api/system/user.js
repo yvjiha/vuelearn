@@ -11,7 +11,7 @@ export function listUser(query) {
 // 查询用户列表
 export function excelCheck(query) {
   return request({
-    url: 'excel/check',
+    url: '/excel/check',
     method: 'put',
     data: query
   })
@@ -20,7 +20,7 @@ export function excelCheck(query) {
 // 查询用户列表
 export function unExcelCheck(query) {
   return request({
-    url: 'excel/unCheck',
+    url: '/excel/unCheck',
     method: 'put',
     data: query
   })
