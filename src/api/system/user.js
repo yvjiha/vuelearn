@@ -8,7 +8,7 @@ export function listUser(query) {
   })
 }
 
-// 查询用户列表
+// 合计
 export function excelCheck(query) {
   return request({
     url: '/excel/check',
@@ -17,12 +17,21 @@ export function excelCheck(query) {
   })
 }
 
-// 查询用户列表
+// 取消合计
 export function unExcelCheck(query) {
   return request({
     url: '/excel/unCheck',
     method: 'put',
     data: query
+  })
+}
+
+// 修改
+export function updateById(param) {
+  return request({
+    url: '/excel',
+    method: 'put',
+    data: param
   })
 }
 

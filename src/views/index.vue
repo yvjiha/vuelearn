@@ -90,11 +90,42 @@
         <el-button @click="upload.open = false">取 消</el-button>
       </div>
     </el-dialog>
+
+    <!-- 修改 -->
+    <el-dialog title="修改详情" :visible.sync="updateOpen" width="700px" append-to-body>
+      <el-form ref="form" :model="goodsLog" label-width="120px">
+        <el-row>
+          <el-col :span="16">
+            <el-form-item label="日期" prop="jobName">
+              <el-input v-model="goodsLog.data" placeholder="请输入日期" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :span="16">
+            <el-form-item label="车号" prop="jobName">
+              <el-input v-model="goodsLog.code" placeholder="请输入车号" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :span="16">
+            <el-form-item label="吨数" prop="jobName">
+              <el-input v-model="goodsLog.weight" type="number" placeholder="吨数" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+      </el-form>
+      <div slot="footer" class="dialog-footer">
+        <el-button type="primary" @click="submitForm">确 定</el-button>
+        <el-button @click="cancel">取 消</el-button>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
 <script>
-import { listUser, excelCheck, unExcelCheck } from "@/api/system/user";
+import { listUser, excelCheck, unExcelCheck, updateById } from "@/api/system/user";
 import "@riophae/vue-treeselect/dist/vue-treeselect.css";
 
 export default {
@@ -118,9 +149,17 @@ export default {
         // 上传的地址
         url: process.env.VUE_APP_BASE_API + "/excel/fileUpload"
       },
+      updateOpen: false,
       // 查询参数
       queryParams: {
         code: '',
+      },
+      // 修改参数
+      goodsLog: {
+        id: '',
+        data: '',
+        code: '',
+        weight: '',
       },
       // 多选
       ids: [],
@@ -170,9 +209,25 @@ export default {
         });
     },
 
+    // 修改记录
+    handleUpdate(row) {
+      this.goodsLog.id = row.id
+      this.goodsLog.data = row.data
+      this.goodsLog.code = row.code
+      this.goodsLog.weight = row.weight
+
+      this.updateOpen = true;
+    },
+
+    // 取消按钮
+    cancel() {
+      this.updateOpen = false;
+      this.resetQuery();
+    },
+
     // 表单重置
     reset() {
-      this.form = {
+      this.queryParams = {
         code: ''
       };
       this.resetForm("form");
@@ -183,9 +238,10 @@ export default {
     },
     /** 重置按钮操作 */
     resetQuery() {
-      this.dateRange = [];
-      this.resetForm("queryForm");
-      this.handleQuery();
+      this.queryParams = {
+        code: ''
+      };
+      this.getList();
     },
     // 多选框选中数据
     handleSelectionChange(selection) {
@@ -196,23 +252,11 @@ export default {
 
     /** 提交按钮 */
     submitForm: function() {
-      this.$refs["form"].validate(valid => {
-        if (valid) {
-          if (this.form.userId != undefined) {
-            updateUser(this.form).then(response => {
-              this.msgSuccess("修改成功");
-              this.open = false;
-              this.getList();
-            });
-          } else {
-            addUser(this.form).then(response => {
-              this.msgSuccess("新增成功");
-              this.open = false;
-              this.getList();
-            });
-          }
-        }
-      });
+      let that = this
+      updateById(this.goodsLog).then(function() {
+        that.updateOpen = false;
+        that.resetQuery();
+      })
     },
     /** 导入按钮操作 */
     handleImport() {
