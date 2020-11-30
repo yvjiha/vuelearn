@@ -27,7 +27,27 @@
               size="mini"
               @click="handleImport"
             >导入</el-button>
+            <el-button
+              type="primary"
+              icon="el-icon-check"
+              size="mini"
+              @click="bulkCheck"
+            >批量合计</el-button>
+            <el-button
+              type="primary"
+              icon="el-icon-close"
+              size="mini"
+              @click="bulkUnCheck"
+            >批量取消合计</el-button>
+            <el-button
+              type="danger"
+              icon="el-icon-delete"
+              size="mini"
+              @click="bulkDel"
+            >批量删除</el-button>
             <span class="sum-weight">总吨数：{{sumWeight}}</span>
+            <span class="sum-weight-line">已合计总吨数：{{checkSumWeight}}</span>
+            <span class="sum-weight-line">未合计总吨数：{{noCheckSumWeight}}</span>
           </el-col>
         </el-row>
 
@@ -125,7 +145,7 @@
 </template>
 
 <script>
-import { listUser, excelCheck, unExcelCheck, updateById } from "@/api/system/user";
+import { listUser, excelCheck, unExcelCheck, updateById, delById } from "@/api/system/user";
 import "@riophae/vue-treeselect/dist/vue-treeselect.css";
 
 export default {
@@ -134,6 +154,10 @@ export default {
     return {
       // 总吨数
       sumWeight: 0,
+      // 未合计总吨数
+      noCheckSumWeight: 0,
+      // 已合计总吨数
+      checkSumWeight: 0,
       // 列表数据
       userList: [],
       // 表单参数
@@ -179,10 +203,21 @@ export default {
       listUser(this.queryParams.code).then(response => {
           this.userList = response;
           var sumWeight = 0
-          for(var index in this.userList){
+          // 未合计总吨数
+          var noCheckSumWeight = 0
+          // 已合计总吨数
+          var checkSumWeight = 0
+          for (var index in this.userList){
+            if(this.userList[index].checkStatus === 0){
+              noCheckSumWeight += this.userList[index].weight * 100
+            }else{
+              checkSumWeight += this.userList[index].weight * 100
+            }
             sumWeight += this.userList[index].weight * 100
           }
           this.sumWeight = sumWeight/100
+          this.noCheckSumWeight = noCheckSumWeight/100
+          this.checkSumWeight = checkSumWeight/100
           this.loading = false;
         }
       );
@@ -204,9 +239,54 @@ export default {
             return excelCheck(ids)
           }
         }).then(() => {
-          this.msgSuccess(text + "成功");
+          this.getList()
           
         });
+    },
+
+    // 批量合计
+    bulkCheck(){
+      var that = this
+      this.$confirm('确认要批量合计吗?', "警告", {
+          confirmButtonText: "确定",
+          cancelButtonText: "取消",
+          type: "warning"
+        }).then(function() {
+          var ids = that.ids
+          excelCheck(ids).then(response => {
+            that.getList()
+          })
+        })
+    },
+
+    // 批量取消合计
+    bulkUnCheck(){
+      var that = this
+      this.$confirm('确认要批量取消合计吗?', "警告", {
+          confirmButtonText: "确定",
+          cancelButtonText: "取消",
+          type: "warning"
+        }).then(function() {
+          var ids = that.ids
+          unExcelCheck(ids).then(response => {
+            that.getList()
+          })
+        })
+    },
+
+    // 批量删除
+    bulkDel(){
+      var that = this
+      this.$confirm('确认要删除吗?', "警告", {
+          confirmButtonText: "确定",
+          cancelButtonText: "取消",
+          type: "warning"
+        }).then(function() {
+          var ids = that.ids
+          delById(ids).then(response => {
+            that.getList()
+          })
+        })
     },
 
     // 修改记录
@@ -275,6 +355,9 @@ export default {
 
 <style>
   .sum-weight{
-    padding-left: 30rem;
+    padding-left: 12rem;
+  }
+  .sum-weight-line{
+    padding-left: 3rem;
   }
 </style>

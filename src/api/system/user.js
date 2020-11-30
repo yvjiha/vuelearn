@@ -35,3 +35,12 @@ export function updateById(param) {
   })
 }
 
+// 删除
+export function delById(param) {
+  return request({
+    url: '/excel/delete',
+    method: 'put',
+    data: param
+  })
+}
+
